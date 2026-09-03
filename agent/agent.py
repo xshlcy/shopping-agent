@@ -91,13 +91,75 @@ def run(query: str, verbose: bool = True, memory_file: str = None) -> str:
             reset_memory_file(token)
 
 
+def chat() -> None:
+    """交互式多轮对话模式：像聊天一样连续对话，保持上下文和记忆。
+
+    和 run() 的区别：run() 是"一次任务、一个回答"，chat() 是"连续对话"——
+    messages 在循环外初始化，每一轮的用户输入和模型回复都累积进去，所以 agent
+    记得之前说过的话。长期记忆（memory.json）也会跨轮生效。
+    """
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    print("=" * 50)
+    print("导购 agent 已启动，输入你的需求开始对话")
+    print("（输入 '退出' / 'quit' 结束）")
+    print("=" * 50)
+
+    while True:
+        try:
+            user_input = input("\n你: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n再见！")
+            break
+
+        if not user_input:
+            continue
+        if user_input.lower() in ("quit", "exit", "q", "退出"):
+            print("再见！")
+            break
+
+        messages.append({"role": "user", "content": user_input})
+
+        # 多步工具循环（和 run 一致，但历史保留在 messages 里）
+        for step in range(1, config.MAX_STEPS + 1):
+            response = client.chat.completions.create(
+                model=config.MODEL,
+                messages=messages,
+                tools=TOOLS,
+                temperature=config.TEMPERATURE,
+            )
+            msg = response.choices[0].message
+            messages.append(msg)
+
+            if msg.tool_calls:
+                names = ", ".join(tc.function.name for tc in msg.tool_calls)
+                print(f"  [调用工具: {names}]")
+                for tc in msg.tool_calls:
+                    result = execute_tool(tc)
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": json.dumps(result, ensure_ascii=False),
+                    })
+                continue  # 工具结果回传后，继续循环让模型再决策
+
+            # 模型没有请求工具，输出最终回答，回到输入循环等下一轮
+            print(f"\n助手: {msg.content}")
+            break
+
+
 if __name__ == "__main__":
+    import sys
     try:
-        print("=" * 50)
-        answer = run("帮我找 500 元以内的头戴式降噪耳机，推荐 2 款并说明理由")
-        print("=" * 50)
-        print("最终回答：\n")
-        print(answer)
+        if "--demo" in sys.argv:
+            # 单次任务演示
+            print("=" * 50)
+            answer = run("帮我找 500 元以内的头戴式降噪耳机，推荐 2 款并说明理由")
+            print("=" * 50)
+            print("最终回答：\n")
+            print(answer)
+        else:
+            # 默认进入交互式对话
+            chat()
     except Exception as e:
         print("运行出错，常见原因见 docs/GUIDE.md")
         print("原始错误：", e)
