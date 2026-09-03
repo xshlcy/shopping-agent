@@ -1,0 +1,30 @@
+# ===== 敏感信息（绝不提交）=====
+.env
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ===== C++ 编译产物（可重新编译，不提交二进制）=====
+*.pyd
+*.so
+*.dll
+*.o
+
+# ===== 运行时生成的状态（会被 agent 改写，不该进版本库）=====
+data/memory.json
+
+# ===== IDE / 编辑器 =====
+.vscode/
+.idea/
+*.swp
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Office 临时锁文件 =====
+~$*
