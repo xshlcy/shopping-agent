@@ -45,7 +45,7 @@ g++ -O3 -shared -std=c++17 index.cpp -o ../agent/fast_index.pyd \
   -static-libgcc -static-libstdc++ -static
 cd ..
 
-# 4. 运行完整 agent（多步循环 + 记忆 + C++ 搜索加速）
+# 4. 运行 agent（默认交互式多轮对话，输入"退出"结束；加 --demo 跑单次演示）
 python agent/agent.py
 
 # 5. 跑评估（30 个任务，成功率 + 质量分）
