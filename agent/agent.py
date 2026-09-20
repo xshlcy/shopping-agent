@@ -150,15 +150,6 @@ def chat() -> None:
 if __name__ == "__main__":
     import sys
     try:
-        if "--demo" in sys.argv:
-            # 单次任务演示
-            print("=" * 50)
-            answer = run("帮我找 500 元以内的头戴式降噪耳机，推荐 2 款并说明理由")
-            print("=" * 50)
-            print("最终回答：\n")
-            print(answer)
-        else:
-            # 默认进入交互式对话
             chat()
     except Exception as e:
         print("运行出错，常见原因见 docs/GUIDE.md")
