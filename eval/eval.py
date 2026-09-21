@@ -51,8 +51,9 @@ def llm_judge(query: str, answer: str, category: str) -> dict:
         "- 需求满足(int,1-5)：是否真正解决了用户需求\n"
         "- 证据充分(int,1-5)：推荐是否基于真实信息、是否写明价格\n"
         "- 无幻觉(int,1-5)：是否编造了不存在的商品或价格\n"
-        "- 预算合规(int,1-5)：推荐是否在用户预算内。注意「100元左右→129元」「没有20元的、"
-        "最便宜269元」这类是合理或诚实回答，不该扣分；只有明确推荐了超预算商品才扣分。\n\n"
+        "- 预算合规(int,1-5)：推荐是否在用户预算内（美元）。注意「100美元预算→推荐129美元」"
+        "是超支；而「没有20美元的、最便宜25.99美元」这类是合理或诚实回答，不该扣分；"
+        "只有明确推荐了超预算商品才扣分。\n\n"
         '只输出 JSON，格式：{"完成": true, "需求满足": 4, "证据充分": 5, "无幻觉": 5, "预算合规": 5}'
     )
     resp = judge_client.chat.completions.create(
@@ -72,22 +73,26 @@ def llm_judge(query: str, answer: str, category: str) -> dict:
 
 
 def check_budget(query: str, answer: str) -> bool:
-    """硬规则（辅助启发式）：检查明确推荐是否超预算。
+    """硬规则（辅助启发式）：检查明确推荐是否超预算（美元）。
 
     正则没有语义，所以这里只做"减误报"处理——诚实拒绝（找不到/没有）不算超支。
     它的定位是辅助：主力判断交给 llm_judge 的「预算合规」字段，这里只抓最明显的
     确定性超支，宁可漏报不可误报。
     """
-    m = re.search(r"(\d+)\s*元", query)
+    # 预算：$50 或 50 美元 / 50 USD
+    m = re.search(r"\$\s*(\d+)|(\d+)\s*(?:美元|USD)", query)
     if not m:
         return True  # 需求没提预算，跳过
-    budget = int(m.group(1))
+    budget = int(m.group(1) or m.group(2))
 
     # 诚实拒绝（正确失败）不算超支——这是 v3 的关键修复
     if any(w in answer for w in ["找不到", "没有", "抱歉", "无法", "未找到", "不存在", "不推荐"]):
         return True
 
-    prices = [int(x) for x in re.findall(r"(\d+)\s*元", answer)]
+    # 答案里的价格：$25.99 或 25.99 美元
+    prices = []
+    for mm in re.finditer(r"\$\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:美元|USD)", answer):
+        prices.append(float(mm.group(1) or mm.group(2)))
     if not prices:
         return True
     return all(p <= budget for p in prices)

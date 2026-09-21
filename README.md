@@ -9,11 +9,12 @@ shopping-agent/
 ├── demo.py            # 入门：单次工具调用的最小示例（先看这个）
 ├── config.py          # 配置：API key、模型、循环步数
 ├── benchmark.py       # 性能对比：C++ 倒排索引 vs Python 线性扫描
+├── build_dataset.py   # 数据 ETL：Amazon 公开数据集 -> products.json
 ├── requirements.txt
 ├── cpp/
 │   └── index.cpp      # C++ 倒排索引源码（pybind11），加速 search_products
 ├── data/
-│   ├── products.json  # 30 条商品数据，跨品类，故意含脏数据（缺字段）
+│   ├── products.json  # 234 条真实 Amazon 商品（含脏数据），由 build_dataset.py 生成
 │   └── memory.json    # 用户偏好（长期记忆，agent 可读写）
 ├── agent/
 │   ├── tools.py       # 5 个工具 + 脏数据防御 + C++ 索引集成（失败回退 Python）
@@ -27,6 +28,12 @@ shopping-agent/
     ├── GUIDE.md       # ⭐ 问题 / 解决方法 / 知识点
     └── INTERVIEW.md   # ⭐ 面试复盘：踩坑 + 设计决策 + 高频问答
 ```
+
+## 数据来源
+
+商品数据来自 **luminati-io/Amazon-dataset-samples** 这个 GitHub 公开数据集（1001 条真实 Amazon 商品，含 title / price / rating / reviews / categories 等字段）。`build_dataset.py` 做了 ETL 清洗——解析价格（字符串/科学计数法）、评分、品类（JSON 数组），过滤掉缺核心字段（价格）的商品，筛选出 **234 条跨品类商品**，并刻意保留数据集里天然缺描述/评价的商品作为「脏数据」样本（练工具层 `.get()` 防御）。
+
+> 换数据 / 复现：`python build_dataset.py` 重跑即可（自动从 jsdelivr CDN 下载原始 CSV）。
 
 ## 快速开始
 

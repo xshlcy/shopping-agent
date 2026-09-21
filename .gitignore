@@ -3,6 +3,7 @@
 
 # ===== Python =====
 __pycache__/
+.cache/
 *.py[cod]
 *.egg-info/
 .venv/

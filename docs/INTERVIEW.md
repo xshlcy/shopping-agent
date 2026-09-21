@@ -44,7 +44,7 @@
 
 ### 坑 5：真实数据是脏的，工具一碰就崩
 
-- **现象**：数据里故意埋了两处脏数据——id=27 缺 `specs`、id=28 缺 `review_summary`。工具用 `p["review_summary"]` 直接下标访问会 `KeyError`，整个 agent 挂掉。
+- **现象**：真实 Amazon 数据集里天然有缺字段的商品（ETL 后保留 4 条：2 条缺 `specs`、2 条缺 `review_summary`）。工具用 `p["review_summary"]` 直接下标访问会 `KeyError`，整个 agent 挂掉。
 - **根因**：真实电商数据一定不规整——缺字段、价格是范围字符串、重复条目。理想数据才整齐。
 - **解决**：工具层统一用 `.get(key, 默认值)` 防御性解析，缺字段返回「暂无」而不是崩溃。
 - **面试延伸**：这是「生产经验」的味道——agent 的工具本质是接外部数据，外部数据不可信，工具层必须是健壮的边界。能说出"EAFP vs LBYL"（`try/except` vs `if key in dict`）会加分。

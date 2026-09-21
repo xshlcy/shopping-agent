@@ -21,10 +21,11 @@ with open(PRODUCTS_FILE, encoding="utf-8") as f:
 try:
     from agent import fast_index
     _INDEX = fast_index.ProductIndex()
+    # 英文数据大小写不敏感：建索引和查询时统一小写，返回时仍用原样
     _INDEX.build(
-        [p["name"] for p in PRODUCTS],
+        [p["name"].lower() for p in PRODUCTS],
         [float(p["price"]) for p in PRODUCTS],
-        [p["tags"] for p in PRODUCTS],
+        [[t.lower() for t in p["tags"]] for p in PRODUCTS],
     )
     _HAS_CPP_INDEX = True
 except ImportError:
@@ -119,19 +120,20 @@ def search_products(keyword: str, max_price=None):
     """关键词 + 价格过滤。优先用 C++ 倒排索引，失败则回退 Python 线性扫描。
 
     注：C++ 索引对 tag 是精确匹配、对 name 是子串匹配；对常见查询（完整 tag
-    或 name 里的词）与 Python 线性扫描结果一致。
+    或 name 里的词）与 Python 线性扫描结果一致。英文数据统一小写后再匹配。
     """
     limit = float("inf") if max_price is None else float(max_price)
+    kw = keyword.lower()
 
     if _HAS_CPP_INDEX:
         # C++ 索引返回的是 PRODUCTS 列表的下标
-        ids = _INDEX.search(keyword, limit)
+        ids = _INDEX.search(kw, limit)
         results = [_summarize(PRODUCTS[i]) for i in ids]
     else:
         results = [
             _summarize(p)
             for p in PRODUCTS
-            if (keyword in p["name"] or any(keyword in t for t in p["tags"]))
+            if (kw in p["name"].lower() or any(kw in t.lower() for t in p["tags"]))
             and p["price"] <= limit
         ]
     return {"count": len(results), "products": results}

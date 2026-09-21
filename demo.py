@@ -32,14 +32,16 @@ MODEL = "deepseek-chat"
 
 client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
-# ============ 1. 模拟商品库（先 mock，第 2 周再接真实数据） ============
+# ============ 1. 商品库（真实 Amazon 商品的一小片，硬编码用于最小示例） ============
+# 主项目 data/products.json 里有 234 条真实数据；这里只放 6 条演示 function calling 三步，
+# 不 import 数据文件，保持示例自包含。价格是美元。
 PRODUCTS = [
-    {"id": 1, "name": "索尼 WH-1000XM4 无线降噪耳机", "price": 1899, "tags": ["降噪", "头戴", "耳机"], "rating": 4.8, "reviews": 12000},
-    {"id": 2, "name": "漫步者 W820NB 降噪耳机", "price": 399, "tags": ["降噪", "头戴", "耳机"], "rating": 4.5, "reviews": 30000},
-    {"id": 3, "name": "小米 Redmi Buds 4 Pro 降噪耳机", "price": 299, "tags": ["降噪", "入耳", "耳机"], "rating": 4.4, "reviews": 8000},
-    {"id": 4, "name": "Apple AirPods Pro 2 主动降噪耳机", "price": 1899, "tags": ["降噪", "入耳", "耳机"], "rating": 4.9, "reviews": 50000},
-    {"id": 5, "name": "Bose QuietComfort 45 降噪耳机", "price": 1599, "tags": ["降噪", "头戴", "耳机"], "rating": 4.7, "reviews": 9000},
-    {"id": 6, "name": "华为 FreeBuds Pro 3 降噪耳机", "price": 1199, "tags": ["降噪", "入耳", "耳机"], "rating": 4.6, "reviews": 15000},
+    {"id": 1, "name": "JBL Charge 4 - Waterproof Portable Bluetooth Speaker", "price": 114.95, "tags": ["bluetooth speaker", "speaker", "waterproof"], "rating": 4.8, "reviews": 45361},
+    {"id": 2, "name": "Razer Kraken Tournament Edition Gaming Headset", "price": 93.95, "tags": ["gaming headset", "headset", "headphones"], "rating": 4.4, "reviews": 6335},
+    {"id": 3, "name": "BUGANI Bluetooth Speaker with 40W Stereo Sound", "price": 69.99, "tags": ["bluetooth speaker", "speaker", "waterproof"], "rating": 4.6, "reviews": 1143},
+    {"id": 4, "name": "MusiBaby Shower Bluetooth Speaker", "price": 25.99, "tags": ["bluetooth speaker", "speaker", "waterproof"], "rating": 4.4, "reviews": 356},
+    {"id": 5, "name": "CXK Wireless Earbuds Bluetooth 5.3 Neckband", "price": 25.99, "tags": ["wireless earbuds", "earbuds", "bluetooth"], "rating": 4.5, "reviews": 94},
+    {"id": 6, "name": "Seagate Ultra Touch SSD 500GB External Drive", "price": 95.03, "tags": ["external ssd", "ssd", "storage"], "rating": 4.6, "reviews": 2005},
 ]
 
 # ============ 2. 工具定义（告诉模型"你能做什么"） ============
@@ -66,11 +68,12 @@ TOOLS = [
 
 # ============ 3. 工具的真实实现 ============
 def search_products(keyword: str, max_price=None):
-    """在 mock 商品库里做关键词 + 价格过滤。"""
+    """在商品库里做关键词 + 价格过滤（大小写不敏感）。"""
+    kw = keyword.lower()
     results = []
     for p in PRODUCTS:
         # 命中条件：名字里含关键词，或标签里含关键词
-        hit = keyword in p["name"] or any(keyword in t for t in p["tags"])
+        hit = kw in p["name"].lower() or any(kw in t for t in p["tags"])
         if hit and (max_price is None or p["price"] <= max_price):
             results.append(p)
     return results  # 返回列表，模型能读懂（后面会序列化成 JSON 回传）
@@ -127,7 +130,7 @@ def run(user_query: str) -> str:
 # ============ 6. 演示 ============
 if __name__ == "__main__":
     try:
-        answer = run("帮我找最贵的耳机")
+        answer = run("Find me a bluetooth speaker under $100")
         print("===== Agent 回答 =====\n")
         print(answer)
     except Exception as e:
